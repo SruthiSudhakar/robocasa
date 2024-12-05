@@ -19,7 +19,8 @@ from robosuite.environments.base import EnvMeta
 from scipy.spatial.transform import Rotation
 
 from robosuite.models.robots import PandaOmron
-
+import pdb
+from termcolor import colored
 import robocasa
 import robocasa.macros as macros
 import robocasa.utils.camera_utils as CamUtils
@@ -242,6 +243,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         use_distractors=False,
         translucent_robot=False,
         randomize_cameras=False,
+        object=None,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 
@@ -1381,7 +1383,18 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         Returns:
             float: Reward for the task
         """
-        reward = 0
+        reward = 0.0
+        # sparse completion reward
+        if self._check_success():
+            reward = 1
+
+        # use a shaping reward
+        elif self.reward_shaping:
+            pass
+        # Scale reward if requested
+        if self.reward_scale is not None:
+            pass
+
         return reward
 
     def _check_success(self):
@@ -1393,6 +1406,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         Returns:
             bool: True if the task is successfully completed, False otherwise
         """
+        assert True==False
         return False
 
     def sample_object(

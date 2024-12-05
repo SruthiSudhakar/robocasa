@@ -12,6 +12,10 @@ from termcolor import colored
 
 import robocasa
 
+'''
+USAGE:
+python scripts/playback_dataset.py --n 2 --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_doors/OpenSingleDoor/2024-04-24/demo_gentex_im128_randcams.hdf5
+'''
 
 def playback_trajectory_with_env(
     env,

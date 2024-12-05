@@ -77,6 +77,7 @@ class PnPCoffee(Kitchen):
                     obj_groups="mug",
                     placement=dict(
                         fixture=self.coffee_machine,
+                        #TODO: coffee reset function not working posibly change the next line to set it to true
                         ensure_object_boundary_in_range=False,
                         margin=0.0,
                         ensure_valid_placement=False,
