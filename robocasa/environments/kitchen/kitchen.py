@@ -42,7 +42,8 @@ from robocasa.utils.texture_swap import (
     replace_wall_texture,
 )
 from robocasa.utils.config_utils import refactor_composite_controller_config
-
+from termcolor import colored
+from robocasa.models.objects.kitchen_objects import OBJ_CATEGORIES, OBJ_GROUPS
 
 REGISTERED_KITCHEN_ENVS = {}
 
@@ -258,8 +259,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             ), "layout_ids and style_ids must both be set to None if layout_and_style_ids is set"
             self.layout_and_style_ids = layout_and_style_ids
         else:
-            layout_ids = SceneRegistry.unpack_layout_ids(layout_ids)
-            style_ids = SceneRegistry.unpack_style_ids(style_ids)
+            layout_ids = SceneRegistry.unpack_layout_ids(layout_ids) #-1 which is esseitnial [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            style_ids = SceneRegistry.unpack_style_ids(style_ids) #[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
             self.layout_and_style_ids = [(l, s) for l in layout_ids for s in style_ids]
 
         # remove excluded layouts
@@ -507,7 +508,17 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 cfg["type"] = "object"
                 if "name" not in cfg:
                     cfg["name"] = "obj_{}".format(obj_num + 1)
+                # graspable='graspable' in cfg and cfg['graspable']==True
+                # if graspable:
+                    # print(colored(f'GRASPABLE, {graspable}','red'))
+                    # if cfg.get('exclude_obj_groups',None) is None:
+                    #     cfg['exclude_obj_groups'] = []
+                    # cfg['exclude_obj_groups'].append('PnPStoveToCounter_seen')
+                    # cfg['obj_groups'] = random.choice(OBJ_GROUPS['PnPStoveToCounter_unseen'])
                 model, info = self._create_obj(cfg)
+                # if graspable:
+                    # cate = info['cat']
+                    # print(colored(f'CREATED NEW OBJECT {cate}. {graspable}','red'))
                 cfg["info"] = info
                 self.objects[model.name] = model
                 self.model.merge_objects([model])
@@ -1030,6 +1041,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         Returns:
             str: Post-processed xml file as string
         """
+        # pdb.set_trace()
         xml_str = super().edit_model_xml(xml_str)
 
         tree = ET.fromstring(xml_str)
@@ -1140,8 +1152,10 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         # result = ET.tostring(root, encoding="utf8").decode("utf8")
         result = ET.tostring(root).decode("utf8")
-
+        # pdb.set_trace()
+        # find the textures and replace with them
         # replace with generative textures
+        # self.generative_textures=False
         if (self.generative_textures is not None) and (
             self.generative_textures is not False
         ):

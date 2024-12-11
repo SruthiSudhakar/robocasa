@@ -21,11 +21,15 @@ Example usage:
 
     # run script only on validation data
     python get_dataset_info.py --dataset ../../tests/assets/test.hdf5 --filter_key valid
+
+    python robocasa/scripts/get_dataset_info.py --dataset datasets/v0.1/single_stage/kitchen_doors/CloseSingleDoor/2024-04-24/demo_gentex_im128_randcams.hdf5
+
 """
 import h5py
 import json
 import argparse
 import numpy as np
+import pdb
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -58,6 +62,10 @@ if __name__ == "__main__":
         demos = sorted(
             [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)])]
         )
+        # if 'demo_55' in demos:
+        #     demos.remove('demo_55')
+        # if 'demo_54' not in demos:
+        #     demos.append('demo_54')
     else:
         # use all demonstrations
         demos = sorted(list(f["data"].keys()))

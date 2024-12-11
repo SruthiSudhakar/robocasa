@@ -11,7 +11,7 @@ import robosuite
 from termcolor import colored
 
 import robocasa
-
+import pdb
 '''
 USAGE:
 python scripts/playback_dataset.py --n 2 --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_doors/OpenSingleDoor/2024-04-24/demo_gentex_im128_randcams.hdf5
@@ -355,13 +355,14 @@ def playback_dataset(args):
 
     # maybe reduce the number of demonstrations to playback
     if args.n is not None:
-        random.shuffle(demos)
+        # random.shuffle(demos)
         demos = demos[: args.n]
 
     # maybe dump video
     video_writer = None
     if write_video:
         video_writer = imageio.get_writer(args.video_path, fps=20)
+    demos = sorted(demos, key=lambda x: int(x.split('_')[1]))
 
     for ind in range(len(demos)):
         ep = demos[ind]
