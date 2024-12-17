@@ -14,7 +14,10 @@ import robocasa
 import pdb
 '''
 USAGE:
-python scripts/playback_dataset.py --n 2 --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_doors/OpenSingleDoor/2024-04-24/demo_gentex_im128_randcams.hdf5
+python robocasa/scripts/playback_dataset.py \
+    --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_pnp/PnPStoveToCounter/2024-05-01/demo_gentex_im128_randcams.hdf5 \
+    --n 5 \
+    --use-actions
 '''
 
 def playback_trajectory_with_env(
@@ -283,6 +286,10 @@ def playback_dataset(args):
             args.video_path = args.dataset.split(".hdf5")[0] + "_use_actions.mp4"
         elif args.use_abs_actions:
             args.video_path = args.dataset.split(".hdf5")[0] + "_use_abs_actions.mp4"
+        elif args.use_obs:
+            args.video_path = args.dataset.split(".hdf5")[0] + "_use_obs.mp4"
+        else:
+            args.video_path = args.dataset.split(".hdf5")[0] + "_use_storedstates.mp4"
     assert not (args.render and write_video)  # either on-screen or video but not both
 
     # Auto-fill camera rendering info if not specified
