@@ -468,6 +468,15 @@ def dataset_states_to_obs_multiprocessing(args):
                 )
 
     output_path = os.path.join(os.path.dirname(args.dataset), output_name)
+    # Check if the file exists
+    if os.path.exists(output_path):
+        # Ask the user if they want to overwrite
+        user_input = input(f"The file '{output_path}' already exists. Overwrite? (y/n): ").strip().lower()
+        if user_input != "y":
+            print("Operation aborted. No changes were made.")
+            sys.exit(0)  # Exit the program without saving
+    else:
+        print("The file does not exist. Proceeding to save.")
 
     print("input file: {}".format(args.dataset))
     print("output file: {}".format(output_path))

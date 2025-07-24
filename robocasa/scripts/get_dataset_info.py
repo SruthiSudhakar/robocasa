@@ -128,11 +128,12 @@ if __name__ == "__main__":
 
     print("==== Dataset Structure ====")
     for ep in demos:
-        print(
-            "episode {} with {} transitions".format(
-                ep, f["data/{}".format(ep)].attrs["num_samples"]
+        if 'num_samples' in f["data/{}".format(ep)].attrs:
+            print(
+                "episode {} with {} transitions".format(
+                    ep, f["data/{}".format(ep)].attrs["num_samples"]
+                )
             )
-        )
         for k in f["data/{}".format(ep)]:
             if k in ["obs", "next_obs"]:
                 print("    key: {}".format(k))

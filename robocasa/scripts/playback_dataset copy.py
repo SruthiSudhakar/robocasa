@@ -13,20 +13,13 @@ from termcolor import colored
 import robocasa
 import pdb
 from tqdm import tqdm
-import shutil
-
 
 '''
 USAGE:
-python /proj/vondrick3/sruthi/robots/robocasa/robocasa/scripts/playback_dataset.py \
-    --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_pnp/PnPSinkToCounter/mg/2024-05-04-22-14-34_and_2024-05-07-07-40-21/demo_gentex_im128_randcams_new_images_val_kbpckt_firsthalf.hdf5 \
-    --use-actions \
-    --add_raw_states
-
-python /proj/vondrick3/sruthi/robots/robocasa/robocasa/scripts/playback_dataset.py \
-    --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_pnp/PnPSinkToCounter/mg/2024-05-04-22-14-34_and_2024-05-07-07-40-21/demo_gentex_im128_randcams_new_images_val_kbpckt_secondhalf.hdf5 \
-    --use-actions \
-    --add_raw_states
+python robocasa/scripts/playback_dataset.py \
+    --dataset /proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_pnp/PnPStoveToCounter/2024-05-01/demo_gentex_im128_randcams.hdf5 \
+    --n 5 \
+    --use-actions
 '''
 
 def playback_trajectory_with_env(
@@ -40,7 +33,6 @@ def playback_trajectory_with_env(
     camera_names=None,
     first=False,
     verbose=False,
-    add_raw_states=False,
 ):
     """
     Helper function to playback a single trajectory using the simulator environment.
@@ -77,41 +69,20 @@ def playback_trajectory_with_env(
         print(colored("Spawning environment...", "yellow"))
     reset_to(env, initial_state)
 
-    if states.shape[0]==1:
-        traj_len = actions.shape[0]
-    else:
-        traj_len = states.shape[0]
-
+    traj_len = states.shape[0]
     action_playback = actions is not None
     if action_playback:
-        try:
-            assert states.shape[0] == actions.shape[0]
-        except Exception as e:
-            print('HUH assert states.shape[0] == actions.shape[0]', e)
-
+        assert states.shape[0] == actions.shape[0]
 
     if render is False:
         print(colored("Running episode...", "yellow"))
 
-    keys_to_save=['robot0_eef_pos', 'obj_pos','container_pos'] #keys_to_save=['0:3', '3:7', '7:10', '10:14', '14:17','17:21','21:24','24:28']
-    save_rollout_raw_obs=None
     for i in range(traj_len):
         start = time.time()
 
         if action_playback:
-            if add_raw_states:
-                get_raw_obs=env._get_observations()
-                concated_current_obs=np.concatenate([get_raw_obs[key] for key in keys_to_save],axis=0)
-                if save_rollout_raw_obs is None:
-                    save_rollout_raw_obs = np.expand_dims(concated_current_obs,0)
-                else:
-                    save_rollout_raw_obs = np.vstack((save_rollout_raw_obs,np.expand_dims(concated_current_obs,0)))
-            pdb.set_trace()
-            start=time.time()
             env.step(actions[i])
-            end=time.time()
-            print('step TIME ELAPSED', end-start)
-            if i < traj_len - 1 and states.shape[0]==actions.shape[0]:
+            if i < traj_len - 1:
                 # check whether the actions deterministically lead to the same recorded states
                 state_playback = np.array(env.sim.get_state().flatten())
                 if not np.all(np.equal(states[i + 1], state_playback)):
@@ -164,9 +135,7 @@ def playback_trajectory_with_env(
     if render:
         env.viewer.close()
         env.viewer = None
-    if save_rollout_raw_obs is None:
-        return []
-    return save_rollout_raw_obs
+
 
 def playback_trajectory_with_obs(
     traj_grp,
@@ -276,41 +245,11 @@ def reset_to(env, state):
         # this reset is necessary.
         # while the call to env.reset_from_xml_string does call reset,
         # that is only a "soft" reset that doesn't actually reload the model.
-        start=time.time()
         env.reset()
-        end=time.time()
-        print('reset TIME ELAPSED', end-start)
-
-        object_configured = True
-        for obj in ep_meta['object_cfgs']:
-            if obj['name']=='obj':
-                if obj['info'] is None:
-                    object_configured=False
-                    print('RELOADING XML')
-        if object_configured:
-            robosuite_version_id = int(robosuite.__version__.split(".")[1])
-            if robosuite_version_id <= 3:
-                from robosuite.utils.mjcf_utils import postprocess_model_xml
-
-                xml = postprocess_model_xml(state["model"])
-            else:
-                # v1.4 and above use the class-based edit_model_xml function
-                xml = env.edit_model_xml(state["model"])
-            env.reset_from_xml_string(xml)
         env.sim.reset()
         # hide teleop visualization after restoring from model
         # env.sim.model.site_rgba[env.eef_site_id] = np.array([0., 0., 0., 0.])
         # env.sim.model.site_rgba[env.eef_cylinder_id] = np.array([0., 0., 0., 0.])
-    elif state.get("ep_meta", None) is not None:
-        ep_meta = json.loads(state["ep_meta"])
-        if hasattr(env, "set_attrs_from_ep_meta"):  # older versions had this function
-            env.set_attrs_from_ep_meta(ep_meta)
-        elif hasattr(env, "set_ep_meta"):  # newer versions
-            env.set_ep_meta(ep_meta)
-        print('RELOADING XML')
-        env.reset()
-        env.sim.reset()
-
     if "states" in state:
         env.sim.set_state_from_flattened(state["states"])
         env.sim.forward()
@@ -399,9 +338,6 @@ def playback_dataset(args):
         env = robosuite.make(**env_kwargs)
 
     f = h5py.File(args.dataset, "r")
-    if args.add_raw_states:
-        assert args.use_actions
-        new_dataset = h5py.File(f'{args.dataset[:-5]}_classifier.hdf5', "r+")
 
     # list of all demonstration episodes (sorted in increasing number order)
     if args.filter_key is not None:
@@ -425,17 +361,12 @@ def playback_dataset(args):
     video_writer = None
     if write_video:
         video_writer = imageio.get_writer(args.video_path, fps=20)
+    demos = sorted(demos, key=lambda x: int(x.split('_')[1]))
 
     for ind in range(len(demos)):
         ep = demos[ind]
-        if args.demos and ep not in args.demos:
-            continue
         if not args.use_obs and 'combined' in args.dataset:
-            try:
-                env_kwargs['env_name']=f['data/{}'.format(ep)].attrs['dataset_path'].split('/proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_pnp/')[1].split('/')[0]
-            except:
-                print('SETTING ENV_KWARGS TO PNPSINKTOCOUNTER')
-                env_kwargs['env_name']='PnPSinkToCounter'
+            env_kwargs['env_name']=f['data/{}'.format(ep)].attrs['dataset_path'].split('/proj/vondrick3/sruthi/robots/robocasa/datasets/v0.1/single_stage/kitchen_pnp/')[1].split('/')[0]
             env = robosuite.make(**env_kwargs)
         print(colored("\nPlaying back episode: {}".format(ep), "yellow"))
         # print(colored("\nPlaying back episode: {}, OG EP {}".format(ep, f['data'][ep].attrs['og_demo_id']), "yellow"))
@@ -455,19 +386,17 @@ def playback_dataset(args):
         initial_state = dict(states=states[0])
         initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
         ep_meta_modified = json.loads(f["data/{}".format(ep)].attrs.get("ep_meta", None))
-        # for obj in ep_meta_modified['object_cfgs']:
-        #     if obj['name']=='obj':
-        #         temp_info = obj.pop('info',None)
-        #         obj['split']='B'
-        #         obj['obj_groups']=temp_info['cat']
-                # print('CANGING THE OBJECT', obj['info']['cat'])
-                # obj.pop('info',None)
-                # obj.pop('cookable',None)
-                # obj.pop('microwavable',None)
-                # obj.pop('washable',None)
-                # obj.pop('freezable',None)
-                # env_name=env_kwargs["env_name"]
-                # obj['exclude_obj_groups']=f"{env_name}_seen"
+        for obj in ep_meta_modified['object_cfgs']:
+            if obj['name']=='obj':
+                print('CANGING THE OBJECT', obj['info']['cat'])
+                temp_info = obj.pop('info',None)
+                obj.pop('info',None)
+                obj.pop('cookable',None)
+                obj.pop('microwavable',None)
+                obj.pop('washable',None)
+                obj.pop('freezable',None)
+                env_name=env_kwargs["env_name"]
+                obj['exclude_obj_groups']=f"{env_name}_seen"
         initial_state["ep_meta"] = json.dumps(ep_meta_modified)
         if args.extend_states:
             states = np.concatenate((states, [states[-1]] * 50))
@@ -482,7 +411,7 @@ def playback_dataset(args):
         elif args.use_abs_actions:
             actions = f["data/{}/actions_abs".format(ep)][()]  # absolute actions
 
-        save_rollout_raw_obs = playback_trajectory_with_env(
+        playback_trajectory_with_env(
             env=env,
             initial_state=initial_state,
             states=states,
@@ -493,22 +422,8 @@ def playback_dataset(args):
             camera_names=args.render_image_names,
             first=args.first,
             verbose=args.verbose,
-            add_raw_states=args.add_raw_states
         )
-        if args.add_raw_states and save_rollout_raw_obs is not None:
-            try:
-                assert save_rollout_raw_obs.shape==(actions.shape[0],9)
-                assert np.allclose(save_rollout_raw_obs[:, :3], new_dataset['data'][ep]['obs']['robot0_eef_pos'][:], rtol=0, atol=1e-1)
-            except:
-                print('something fishy')
-                print('something fishy')
-            if 'raw_obs' in new_dataset['data'][ep]:
-                del new_dataset['data'][ep]['raw_obs']
-            new_dataset['data'][ep].create_dataset('raw_obs', data=save_rollout_raw_obs)
 
-    if args.add_raw_states:
-        new_dataset.close()
-        print(f'{args.dataset[:-5]}_classifier.hdf5')
     f.close()
     if write_video:
         print(colored(f"Saved video to {args.video_path}", "green"))
@@ -616,16 +531,6 @@ if __name__ == "__main__":
         action="store_true",
         help="log additional information",
     )
-    parser.add_argument(
-        "--demos",
-        nargs="+",  # Accepts one or more values
-        type=str,   # Specify the type of each item in the list
-        help="A list of items",
-    )
-    parser.add_argument(
-        "--add_raw_states",
-        action="store_true",
-        help="create new dataset with raw states",
-    )
+
     args = parser.parse_args()
     playback_dataset(args)

@@ -44,7 +44,7 @@ from robocasa.utils.texture_swap import (
 from robocasa.utils.config_utils import refactor_composite_controller_config
 from termcolor import colored
 from robocasa.models.objects.kitchen_objects import OBJ_CATEGORIES, OBJ_GROUPS
-
+import pdb
 REGISTERED_KITCHEN_ENVS = {}
 
 
@@ -275,7 +275,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         self.use_distractors = use_distractors
         self.translucent_robot = translucent_robot
-        self.randomize_cameras = randomize_cameras
+        self.randomize_cameras = False #randomize_cameras
 
         # intialize cameras
         self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
@@ -306,7 +306,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 controller_configs["composite_controller_specific_configs"][
                     "body_part_ordering"
                 ] = ["right", "right_gripper", "base", "torso"]
-
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -327,8 +326,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             ignore_done=ignore_done,
             hard_reset=hard_reset,
             camera_names=camera_names,
-            camera_heights=camera_heights,
-            camera_widths=camera_widths,
+            camera_heights=256,
+            camera_widths=256,
             camera_depths=camera_depths,
             renderer=renderer,
             renderer_config=renderer_config,
@@ -593,7 +592,10 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             freezable=cfg.get("freezable", None),
             max_size=cfg.get("max_size", (None, None, None)),
             object_scale=cfg.get("object_scale", None),
+            split=cfg.get("split", None),            
         )
+        if cfg.get("split", None):
+            print('WHAT SPLIT ARE WE USING', cfg['split'])
         info = object_info
 
         object = MJCFObject(name=cfg["name"], **object_kwargs)
@@ -987,9 +989,12 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         """
         Adds new kitchen-relevant cameras to the environment. Will randomize cameras if specified.
         """
-
-        self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
+        if 'cam_configs' in self._ep_meta:
+            self._cam_configs = self._ep_meta['cam_configs']
+        else:
+            self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
         if self.randomize_cameras:
+            print('RANDOMIZING CAMERA')
             self._randomize_cameras()
 
         for (cam_name, cam_cfg) in self._cam_configs.items():
@@ -1004,6 +1009,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             )
 
     def _randomize_cameras(self):
+        print('SHOULD NOT BE RANDOMIZING CAMERAS')
+        assert False==True
         """
         Randomizes the position and rotation of the wrist and agentview cameras.
         Note: This function is called only if randomize_cameras is set to True.
@@ -1041,7 +1048,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         Returns:
             str: Post-processed xml file as string
         """
-        # pdb.set_trace()
         xml_str = super().edit_model_xml(xml_str)
 
         tree = ET.fromstring(xml_str)
@@ -1152,7 +1158,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         # result = ET.tostring(root, encoding="utf8").decode("utf8")
         result = ET.tostring(root).decode("utf8")
-        # pdb.set_trace()
         # find the textures and replace with them
         # replace with generative textures
         # self.generative_textures=False

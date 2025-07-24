@@ -11,7 +11,8 @@ from robocasa.models.objects.kitchen_objects import OBJ_CATEGORIES, OBJ_GROUPS
 
 BASE_ASSET_ZOO_PATH = os.path.join(robocasa.models.assets_root, "objects")
 
-
+from termcolor import colored
+import pdb
 class ObjCat:
     """
     Class that encapsulates data for an object category.
